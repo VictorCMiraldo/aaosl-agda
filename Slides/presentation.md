@@ -9,22 +9,47 @@ header-includes: |
   \setbeamertemplate{itemize items}{>>}
   \setbeamertemplate{itemize subitem}{-}
 monofont: DejaVuSansMono.ttf
+header: |
+  \newcommand{\guydash}{-{\hskip-0.3em}-}
+  \newcommand{\hash}{\mathrm{hash}}
+  \newcommand{\rebuild}{\mathrm{rebuild}}
+  \newcommand{\rebuildmem}{\mathrm{rebuild}_\mathrm{mem}}
+  \newcommand{\hoptgt}{\hbox{\it hop\guydash{}tgt}}
 ---
-\newcommand{\guydash}{-{\hskip-0.3em}-}
-\newcommand{\hash}{\mathrm{hash}}
-\newcommand{\rebuild}{\mathrm{rebuild}}
-\newcommand{\hoptgt}{\hbox{\it hop\guydash{}tgt}}
 
 # What, Why and How?
 
-Formalized Authenticated Append-Only Skip Lists, originally from Maniatis and Baker ([arxiv pdf](http://arxiv.org/abs/cs/0302010))\footnote{`arxiv.org/abs/cs/0302010`}, in Agda:\pause
+Formalized Authenticated Append-Only Skip Lists, originally from Maniatis
+and Baker ([arxiv pdf](http://arxiv.org/abs/cs/0302010))\footnote{\texttt{arxiv.org/abs/cs/0302010}},
+in Agda:\pause
 
-- Formalized a generalization of the original datastructure,\pause
-- Formalized the security properties from Maniatis and Baker,\pause
-- Proved the proposed generalization satisfies the security properties,\pause
-- Proved Maniatis and Baker's AAOSL is an instance of our generalization.\pause
+\vfill
 
-Uncovered interesting simplifications and made the security argument clearer\pause
+- Formalized a generalization of the original data structure\pause
+- Formalized the security properties from Maniatis and Baker\pause
+- Proved generalization satisfies said properties\pause
+- Proved original$^1$ AAOSL instance of generalization
+
+\vfill
+\vfill
+
+# This Presentation
+
+\vfill
+
+- Why AAOSL are an interesting data structure?\pause
+- Which security properties do they provide?\pause
+- What is the generalization that enjoy said properties?\pause
+
+\vfill
+
+For the gory details, check the paper\footnote{\texttt{victorcmiraldo.github.io/data/cpp2021.pdf}}
+and the repository\footnote{\texttt{github.com/oracle/aaosl-agda}}
+
+\vfill
+
+In the name of simplicity, the code presented in these slides
+deviates slightly from the paper
 
 # Traditional Append-Only Structures: Blockchains
 
@@ -51,34 +76,40 @@ Uncovered interesting simplifications and made the security argument clearer\pau
 \vfill
 \pause
 - Prevent attacker rewriting history:
-  + agree on $\hash\;e_{n+1}$ implies agree on $\hash\;e_n$\pause
-
-- Works well with static membership and no garbage collection
+  + agree on $\hash\;e_{n+1}$ implies agree on $\hash\;e_n$
 
 \vfill
 
 # Traditional Append-Only Structures: Blockchains
 
-Or, in Haskell:
+```haskell
+type Log a = [Auth a]
+```
+\pause
+\vfill
 
 ```haskell
 data Auth a = Auth a Digest
 
 digest :: Auth a -> Digest
 digest (Auth _ dig) = dig
+```
+\pause
+\vfill
 
-type Log a = [Auth a]
-
+```haskell
 append :: (Hashable a) => a -> Log a -> Log a
 append x l = mkauth x l : l
 ```
 \pause
+\vfill
+
 ```haskell
 mkauth :: (Hashable a) => a -> Log a -> Auth a
 mkauth x []              = error "Log not initialized"
 mkauth x (Auth y dy : l) = Auth x (hash (hash x ++ dy))
 ```
-
+\vfill
 
 # Problem: Dynamic Participation
 
@@ -109,7 +140,6 @@ mkauth x (Auth y dy : l) = Auth x (hash (hash x ++ dy))
 	 + copy of $s_{n+1}$
 	 + enough signatures over $\hash\;e_{n+1}$\pause
 
-- Option (2) is better: log always increases
 \vfill
 
 # Dynamic Participation: Verifying Claims
@@ -251,7 +281,7 @@ adv7_12 ~ ( Hop d12 12 2 (Hop d8 8 0 Done)
 # Advancement Proofs
 
 ```haskell
-rebuild :: AdvProof -> Digest -> Digest
+rebuild :: AdvProof -> Digest -> Map Index Digest
 ```
 \pause
 \vfill
@@ -267,7 +297,7 @@ adv7_12 ~ ( Hop d12 12 2 (Hop d8 8 0 Done)
 rebuild adv7_12 my_h7
   = let r8  = auth 8  d8  [my_h7, h6, h4, h0]
         r12 = auth 12 d12 [h11,h10,r8]
-    in r12
+    in snd adv7_12 `union` r8 `union` r12
 ```
 \vfill
 
@@ -304,11 +334,11 @@ mem7_12 ~ ( d7 , ( Hop d12 12 2 (Hop d8 8 0 Done)
 
 Rebuilding now takes an extra step:
 ```haskell
-rebuild_mem mem7_12
-  = let r7  = auth 7  d7 [h6]
-        r8  = auth 8  d8 [r7, h6, h4, h0]
+rebuild_mem (d7, adv7_12)
+  = let r7  = auth 7  d7  [h6]
+        r8  = auth 8  d8  [r7, h6, h4, h0]
         r12 = auth 12 d12 [h11,h10,r8]
-    in r12
+    in snd adv7_12 `union` r7 `union` r8 `union` r12
 ```
 
 #
@@ -355,8 +385,15 @@ rebuild_mem mem7_12
 \end{tikzpicture}}
 \end{center}
 
-\onslide<1->{If $\rebuild\;a_1\;j \equiv \rebuild\;a_2\;j$}
-\onslide<4->{, then $\rebuild\;a_1\;s_1 \equiv \;rebuild\;a_2\;s_1$ and $\rebuild\;a_1\;s_2 \equiv \rebuild\;a_2\;s_2$ }
+\pause
+
+\vspace{-3.3em}
+\begin{align*}
+             &\rebuild\;a_1\;i_1\;j \equiv \rebuild\;a_2\;i_2\;j \\
+ \Rightarrow\; &\rebuild\;a_1\;i_1\;s_1 \equiv \rebuild\;a_2\;i_2\;s_1 \\
+ \wedge\;      &\rebuild\;a_1\;i_1\;s_2 \equiv \rebuild\;a_2\;i_2\;s_2
+\end{align*}
+
 
 # Evolutionary Collision Resistance
 
@@ -388,9 +425,14 @@ rebuild_mem mem7_12
 \end{tikzpicture}}
 \end{center}
 
-\onslide<2->{If $\rebuild\;a_1\;j \equiv \rebuild\;a_2\;j$}
-\onslide<4->{and $\rebuild\;m_i\;s_i \equiv \rebuild\;a_i\;s_i$, then}
-\onslide<5->{$m_1$ and $m_2$ authenticate the same data.}
+\pause
+
+\vspace{-3em}
+\begin{align*}
+ & \rebuild\;a_1\;i_1\;j \equiv \rebuild\;a_2\;i_2\;j \\
+ \wedge\; & \rebuildmem\;m_k\;s_k \equiv \rebuild\;a_k\;i_k\;s_k \\
+ \Rightarrow\; & m_1 \text{ and } m_2 \text{ authenticate the same data }
+\end{align*}
 
 
 # Semi-Evolutionary Collision Resistance
@@ -460,7 +502,7 @@ In fact, any skiplist such that hops never \emph{cross} will enjoy \textsc{AOC} 
 
 \pause
 
-If $\hoptgt\;h_2 < \hoptgt\;h_1$ and $hoptgt\;h_1 < j_2$, then $j_1 \leq j_2$.
+If $\hoptgt\;h_2 < \hoptgt\;h_1$ and $\hoptgt\;h_1 < j_2$, then $j_1 \leq j_2$.
 
 \vfill
 
@@ -530,7 +572,5 @@ Formal model in Agda enabled experimentation.\pause
     + Core principle: `auth j d hs ≡ auth j d' hs'` implies `d ≡ d'` and `hs ≡ hs'` modulo hash collisions
 
 \vfill
-\pause
 
-Being precise is important, even on paper. Maniatis and Baker's original description of \textsc{evo-cr}
-is in plain english, which means we had to interpret it, and we missed a detail.
+\vfill
