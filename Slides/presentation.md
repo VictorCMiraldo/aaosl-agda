@@ -162,10 +162,9 @@ After a few rounds of dynamic participation no participant might contain all ent
 
 # Authenticated Append-Only Skip Lists (AAOSL)
 
-- Originally from Maniatis and Maniatis ([arxiv pdf](http://arxiv.org/abs/cs/0302010))
 - Make $\hash\;e_n$ depend on more than one entry.\pause
-  + Let $n = 2^l \times d$, for an odd $d$, $\hash\;e_d$ will depend
-  on $e_i$, $i \in \{ e_{2^l \times d - 2^k} \mid k \leq l \}$.\pause
+  + Maniatis and Baker connect the multiples of $2^l$, for $l = 0, 1, \cdots$
+  + As we shall see later, nothing special about using powers of two.
 
 \resizebox{\textwidth}{!}{\begin{tikzpicture}
 	\node (gen) {$\star$};
@@ -201,9 +200,7 @@ After a few rounds of dynamic participation no participant might contain all ent
 \end{tikzpicture}}
 
 \pause
-- The _level_ of $n = 2^l*d$ is defined as $l+1$
-  + Indicates number of dependencies of $n$.
-  + Example: level of $8 = 2^3 \times 1$ is $4$.
+- The _level_ of $n$ indicated the number of dependencies of $n$
 
 # Append-Only Authenticated Skip Lists (AAOSL)
 
@@ -233,6 +230,7 @@ auth j datumDig lvlDigs =
 
 - Proves to a verifier that log advanced from $i$
 to $j \geq i$\pause
+  + enables verifier to construct $\hash\;e_j$ based on its own $\hash\;e_i$\pause
 
 - Example: an advancement proof from 7 to 12
   + enables to construct $\hash\;e_{12}$ given $\hash\;e_{7}$ \pause
@@ -278,7 +276,10 @@ adv7_12 ~ ( Hop dh12 12 2 (Hop dh8 8 0 Done)
                          | i <- [0, 4, 6, 10, 11] ])
 ```
 
-# Advancement Proofs
+# Rebuilding Advancement Proofs
+
+The process of rebuilding an advancement proof constructs
+part of the view of the prover over the log:
 
 ```haskell
 rebuild :: AdvProof -> Digest -> Map Index Digest
@@ -301,48 +302,68 @@ rebuild adv7_12 my_h7
                    `union` (12 , r12)
 ```
 \vfill
+\pause
+
+```haskell
+hash_e12 = (rebuild adv7_12 my_h7) 12
+```
+
+\vfill
 
 # Membership Proofs
 
-Prove datum $d$ is in index $i$ for someone who trusts
-the digest $\hash\;e_j$ for $j \geq i$.\pause
+- Proves datum $d$ is in $e_i$ for someone who trusts
+$e_j$ for $j \geq i$\pause
+  + provides information to construct $\hash\;e_i$\pause
+  + provides an advancement proof from $j$ to $i$.\pause
+
 \vfill
 
-Consists of an advancement proof from $i$ to $j$,
-the dependencies of $i$ and the data at $i$.
-\vfill
+- Example: to prove data at position 7 is $d_7$, we need:
+  + The data $d_7$
+  + The hashes for dependencies for index 7, in this case, only 6.
+  + An advancement from 7 to 12
 
-Say we want to prove data at position 7 is $d7$:
+
 ```haskell
 mem7_12 ~ ( d7 , adv7_12 `add_auth_to_map` [(6, h6)])
 ```
-\vfill
+
+\pause
+
+Since `h6` was already present in the authenticator map of `adv7_12`,
+
+```haskell
+mem7_12 ~ ( d7 , adv7_12 )
+```
+
+
 
 # Membership Proofs: Rebuilding a Root
-Say we want to prove data at position 7 is $d7$:
-```haskell
-mem7_12 ~ ( d7 , adv7_12 `add_auth_to_map` [(6, h6)])
-```
-\pause\vfill
 
-Since `h6` was already present, `adv7_12` does not change:
-```haskell
-mem7_12 ~ ( d7 , ( Hop dh12 12 2 (Hop dh8 8 0 Done)
-                 , M.fromList [ (i, digestFor log i)
-                                | i <- [0, 4, 6, 10, 11] ]))
-```
-\pause\vfill
 
-Rebuilding now takes an extra step:
+Rebuilding $\hash\;e_{12}$ from `mem7_12` is easy:
+
+\vfill
+
+Recall advancement proof rebuild
+
+```haskell
+rebuild :: AdvProof -> Digest -> Map Index Digest
+```
+
+\pause
+\vfill
+
+
 ```haskell
 rebuild_mem (d7, adv7_12)
-  = let r7  = auth 7  (hash d7) [h6]
-        r8  = auth 8  dh8       [r7, h6, h4, h0]
-        r12 = auth 12 dh12      [h11, h10, r8]
-    in snd adv7_12 `union` (7  , r7)
-                   `union` (8  , r8)
-                   `union` (12 , r12)
+  = let r7 = auth 7 (hash d7) [h6]
+     in rebuild adv7_12 r7 `union` (7, r7)
 ```
+
+\vfill
+\vfill
 
 #
 
@@ -474,7 +495,7 @@ at [`github.com/oracle/aaosl-agda`](https://github.com/oracle/aaosl-agda)
 
 # Which AAOSL's enjoy \textsc{aoc} and \textsc{evo-cr}?
 
-Nothing special about building the skiplist with powers of 2\pause
+Nothing special about building the skiplist with powers of two\pause
 
 In fact, any skiplist such that hops never \emph{cross} will enjoy \textsc{AOC} and \textsc{EVO-CR}
 
