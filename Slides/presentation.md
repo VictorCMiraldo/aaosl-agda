@@ -273,9 +273,9 @@ to $j \geq i$\pause
 
 \pause
 ```haskell
-adv7_12 ~ ( Hop d12 12 2 (Hop d8 8 0 Done)
+adv7_12 ~ ( Hop dh12 12 2 (Hop dh8 8 0 Done)
           , M.fromList [ (i, digestFor log i)
-                       | i <- [0,4,6,10,11] ])
+                         | i <- [0, 4, 6, 10, 11] ])
 ```
 
 # Advancement Proofs
@@ -287,17 +287,18 @@ rebuild :: AdvProof -> Digest -> Map Index Digest
 \vfill
 
 ```haskell
-adv7_12 ~ ( Hop d12 12 2 (Hop d8 8 0 Done)
+adv7_12 ~ ( Hop dh12 12 2 (Hop dh8 8 0 Done)
           , M.fromList [ (i, digestFor log i)
-                       | i <- [0,4,6,10,11] ])
+                         | i <- [0, 4, 6, 10, 11] ])
 ```
 \pause
 \vfill
 ```haskell
 rebuild adv7_12 my_h7
-  = let r8  = auth 8  d8  [my_h7, h6, h4, h0]
-        r12 = auth 12 d12 [h11,h10,r8]
-    in snd adv7_12 `union` r8 `union` r12
+  = let r8  = auth 8  dh8  [my_h7, h6, h4, h0]
+        r12 = auth 12 dh12 [h11, h10, r8]
+    in snd adv7_12 `union` (8  , r8)
+                   `union` (12 , r12)
 ```
 \vfill
 
@@ -326,19 +327,21 @@ mem7_12 ~ ( d7 , adv7_12 `add_auth_to_map` [(6, h6)])
 
 Since `h6` was already present, `adv7_12` does not change:
 ```haskell
-mem7_12 ~ ( d7 , ( Hop d12 12 2 (Hop d8 8 0 Done)
+mem7_12 ~ ( d7 , ( Hop dh12 12 2 (Hop dh8 8 0 Done)
                  , M.fromList [ (i, digestFor log i)
-                              | i <- [0,4,6,10,11] ]))
+                                | i <- [0, 4, 6, 10, 11] ]))
 ```
 \pause\vfill
 
 Rebuilding now takes an extra step:
 ```haskell
 rebuild_mem (d7, adv7_12)
-  = let r7  = auth 7  d7  [h6]
-        r8  = auth 8  d8  [r7, h6, h4, h0]
-        r12 = auth 12 d12 [h11,h10,r8]
-    in snd adv7_12 `union` r7 `union` r8 `union` r12
+  = let r7  = auth 7  (hash d7) [h6]
+        r8  = auth 8  dh8       [r7, h6, h4, h0]
+        r12 = auth 12 dh12      [h11, h10, r8]
+    in snd adv7_12 `union` (7  , r7)
+                   `union` (8  , r8)
+                   `union` (12 , r12)
 ```
 
 #
