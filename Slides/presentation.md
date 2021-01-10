@@ -17,7 +17,9 @@ header: |
   \newcommand{\hoptgt}{\hbox{\it hop\guydash{}tgt}}
 ---
 
-# What, Why and How?
+# Contributions
+
+\pause
 
 Formalized Authenticated Append-Only Skip Lists, originally from Maniatis
 and Baker ([arxiv pdf](http://arxiv.org/abs/cs/0302010))\footnote{\texttt{arxiv.org/abs/cs/0302010}},
@@ -35,11 +37,12 @@ in Agda:\pause
 
 # This Presentation
 
+\pause
 \vfill
 
-- Why AAOSL are an interesting data structure?\pause
-- Which security properties do they provide?\pause
-- What is the generalization that enjoy said properties?\pause
+- Why AAOSLs are an interesting data structure\pause
+- Definition of AAOSLs\pause
+- Which security properties do they provide\pause
 
 \vfill
 
@@ -52,6 +55,8 @@ In the name of simplicity, the code presented in these slides
 deviates slightly from the paper
 
 # Traditional Append-Only Structures: Blockchains
+
+\pause
 
 - Only _lookup_ and _append_ operations\pause
 - Entry $n+1$ depends on hash of entry $n$
@@ -81,6 +86,9 @@ deviates slightly from the paper
 \vfill
 
 # Traditional Append-Only Structures: Blockchains
+
+\pause
+
 
 ```haskell
 type Log a = [Auth a]
@@ -113,6 +121,8 @@ mkauth x (Auth y dy : l) = Auth x (hash (hash x ++ dy))
 
 # Problem: Dynamic Participation
 
+\pause
+
 \vfill
 \begin{tikzpicture}
 	\node (gen) {$\star$};
@@ -138,11 +148,13 @@ mkauth x (Auth y dy : l) = Auth x (hash (hash x ++ dy))
   1. Download the entire history and compute state $s_{n+1}$\pause
   1. Download a "checkpoint" package
 	 + copy of $s_{n+1}$
-	 + enough signatures over $\hash\;e_{n+1}$\pause
+	 + enough signatures over $\hash\;e_{n+1}$
 
 \vfill
 
 # Dynamic Participation: Verifying Claims
+
+\pause
 
 Say $p$ began participation at $n$, \pause now say $p$ receives a claim about some
 entry $e_i$, for $i < n$. How should $p$ check the claim's veracity?
@@ -161,6 +173,8 @@ After a few rounds of dynamic participation no participant might contain all ent
 \vfill
 
 # Authenticated Append-Only Skip Lists (AAOSL)
+
+\pause
 
 - Make $\hash\;e_n$ depend on more than one entry.\pause
   + Maniatis and Baker connect the multiples of $2^l$, for $l = 0, 1, \cdots$
@@ -196,7 +210,7 @@ After a few rounds of dynamic participation no participant might contain all ent
 	\draw[->] ($ (e8.north west) + (.2,0) $) to[out=105,in=75] ($ (e4.north east) - (.2,0) $);
 	\pause
 	\draw[->] ($ (e8.north west) + (.3,0) $) to[out=100,in=90] ($ (gen.north east) - (.3,0) $);
-\onslide<1->
+\onslide<2->
 \end{tikzpicture}}
 
 \pause
@@ -278,6 +292,8 @@ adv7_12 ~ ( Hop dh12 12 2 (Hop dh8 8 0 Done)
 
 # Rebuilding Advancement Proofs
 
+\pause
+
 The process of rebuilding an advancement proof constructs
 part of the view of the prover over the log:
 
@@ -312,6 +328,8 @@ hash_e12 = (rebuild adv7_12 my_h7) 12
 
 # Membership Proofs
 
+\pause
+
 - Proves datum $d$ is in $e_i$ for someone who trusts
 $e_j$ for $j \geq i$\pause
   + provides information to construct $\hash\;e_i$\pause
@@ -336,8 +354,6 @@ Since `h6` was already present in the authenticator map of `adv7_12`,
 ```haskell
 mem7_12 ~ ( d7 , adv7_12 )
 ```
-
-
 
 # Membership Proofs: Rebuilding a Root
 
@@ -371,6 +387,45 @@ rebuild_mem (d7, adv7_12)
 \Huge
 \color{blue!65!black}{Security Properties}
 \end{center}
+
+# Which AAOSL's enjoy the security properties?
+
+\pause
+
+Nothing special about building the skiplist with powers of two\pause
+
+In fact, any skiplist with dependency hops that never \emph{cross} will work.
+
+\vfill
+
+\begin{center}
+\resizebox{.7\textwidth}{!}{
+\begin{tikzpicture}
+  \node                      (h1) {$h_1$};
+  \node [above = of h1]      (h2) {$h_2$};
+  \node [below left = of h1] (tgt1) {$\hoptgt\;h_1$};
+  \node [left = of tgt1]     (tgt2) {$\hoptgt\;h_2$};
+  \node [below right = of h1] (j1p) {};
+  \node [right = of j1p]       (j2) {$j_2$};
+  \node (form)  at ($ (tgt2)!0.5!(tgt1) $) {$<$};
+  \node (form3) at ($ (tgt1)!0.5!(j1p) $) {$<$};
+  \draw [line width=0.25mm, ->] (j2) |- (h2.south) -| (tgt2);
+  \draw [line width=0.25mm, ->] (h1.south) -| (tgt1);
+  \pause
+  \node (j1) at (j1p) {$j_1$};
+  \node (form2) at ($ (j1)!0.5!(j2)     $) {$\leq$};
+  \draw [line width=0.25mm] (j1) |- (h1.south);
+\onslide<3->
+\end{tikzpicture}}
+\end{center}
+
+\vfill
+
+\pause
+
+If $\hoptgt\;h_2 < \hoptgt\;h_1$ and $\hoptgt\;h_1 < j_2$, then $j_1 \leq j_2$.
+
+\vfill
 
 # Agree On Common
 
@@ -493,42 +548,6 @@ Interpretation mistake: our paper proved something \emph{less} general:
 Already fixed! Same \textsc{evo-cr} as original authors available
 at [`github.com/oracle/aaosl-agda`](https://github.com/oracle/aaosl-agda)
 
-# Which AAOSL's enjoy \textsc{aoc} and \textsc{evo-cr}?
-
-Nothing special about building the skiplist with powers of two\pause
-
-In fact, any skiplist such that hops never \emph{cross} will enjoy \textsc{AOC} and \textsc{EVO-CR}
-
-\vfill
-
-\begin{center}
-\resizebox{.7\textwidth}{!}{
-\begin{tikzpicture}
-  \node                      (h1) {$h_1$};
-  \node [above = of h1]      (h2) {$h_2$};
-  \node [below left = of h1] (tgt1) {$\hoptgt\;h_1$};
-  \node [left = of tgt1]     (tgt2) {$\hoptgt\;h_2$};
-  \node [below right = of h1] (j1p) {};
-  \node [right = of j1p]       (j2) {$j_2$};
-  \node (form)  at ($ (tgt2)!0.5!(tgt1) $) {$<$};
-  \node (form3) at ($ (tgt1)!0.5!(j1p) $) {$<$};
-  \draw [line width=0.25mm, ->] (j2) |- (h2.south) -| (tgt2);
-  \draw [line width=0.25mm, ->] (h1.south) -| (tgt1);
-  \pause
-  \node (j1) at (j1p) {$j_1$};
-  \node (form2) at ($ (j1)!0.5!(j2)     $) {$\leq$};
-  \draw [line width=0.25mm] (j1) |- (h1.south);
-\onslide<1->
-\end{tikzpicture}}
-\end{center}
-
-\vfill
-
-\pause
-
-If $\hoptgt\;h_2 < \hoptgt\;h_1$ and $\hoptgt\;h_1 < j_2$, then $j_1 \leq j_2$.
-
-\vfill
 
 # Working Modulo Hash Collisions
 
